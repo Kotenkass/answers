@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: answers
+  labels:
+    app: answers
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: answers
+  template:
+    metadata:
+      labels:
+        app: answers
+    spec:
+      containers:
+        - name: answers
+          image: docker.io/Kotenkass/answers:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: answers-env
+                  key: DATABASE_URL
+            - name: KAFKA_BOOTSTRAP
+              valueFrom:
+                secretKeyRef:
+                  name: answers-env
+                  key: KAFKA_BOOTSTRAP
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 12
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 6
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: answers
+  labels:
+    app: answers
+spec:
+  type: ClusterIP
+  selector:
+    app: answers
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+      protocol: TCP

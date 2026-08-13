@@ -1,0 +1,4 @@
+.git
+answers
+*.test
+coverage.out
