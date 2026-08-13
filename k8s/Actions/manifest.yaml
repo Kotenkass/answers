@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: answers
-          image: docker.io/Kotenkass/answers:latest
+          image: docker.io/anikolaevdo/answers:latest
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
