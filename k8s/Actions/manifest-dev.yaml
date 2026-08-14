@@ -5,6 +5,16 @@ metadata:
   labels:
     environment: dev
 ---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: answers-dev-env
+  namespace: dev
+type: Opaque
+stringData:
+  DATABASE_URL: postgres://postgres:postgres@postgres-dev.dev.svc.cluster.local:5432/users?sslmode=disable
+  KAFKA_BOOTSTRAP: kafka-kafka-bootstrap.kafka.svc:9092
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
