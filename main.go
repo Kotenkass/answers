@@ -169,12 +169,57 @@ func loadConfig() (Config, error) {
 		httpAddr = defaultHTTPAddr
 	}
 
+	if databaseURL == "" {
+		databaseURL, err = databaseURLFromEnv()
+		if err != nil {
+			return Config{}, err
+		}
+	}
+
 	return Config{
 		HTTPAddr:       httpAddr,
 		DatabaseURL:    databaseURL,
 		KafkaBootstrap: kafkaBootstrap,
 		LogLevel:       logLevel,
 	}, nil
+}
+
+func databaseURLFromEnv() (string, error) {
+	host := strings.TrimSpace(os.Getenv("POSTGRES_HOST"))
+	port := strings.TrimSpace(os.Getenv("POSTGRES_PORT"))
+	db := strings.TrimSpace(os.Getenv("POSTGRES_DB"))
+	user := strings.TrimSpace(os.Getenv("POSTGRES_USER"))
+	password := strings.TrimSpace(os.Getenv("POSTGRES_PASSWORD"))
+	sslMode := strings.TrimSpace(os.Getenv("POSTGRES_SSLMODE"))
+
+	if host == "" {
+		return "", errors.New("POSTGRES_HOST is required")
+	}
+	if port == "" {
+		return "", errors.New("POSTGRES_PORT is required")
+	}
+	if db == "" {
+		return "", errors.New("POSTGRES_DB is required")
+	}
+	if user == "" {
+		return "", errors.New("POSTGRES_USER is required")
+	}
+	if password == "" {
+		return "", errors.New("POSTGRES_PASSWORD is required")
+	}
+	if sslMode == "" {
+		sslMode = "disable"
+	}
+
+	return fmt.Sprintf(
+		"postgres://%s:%s@%s:%s/%s?sslmode=%s",
+		user,
+		password,
+		host,
+		port,
+		db,
+		sslMode,
+	), nil
 }
 
 func parseLogLevel(raw string) (logrus.Level, error) {

@@ -12,7 +12,6 @@ metadata:
   namespace: dev
 type: Opaque
 stringData:
-  DATABASE_URL: postgres://postgres:postgres@postgres-dev.dev.svc.cluster.local:5432/users?sslmode=disable
   KAFKA_BOOTSTRAP: kafka-kafka-bootstrap.kafka.svc:9092
 ---
 apiVersion: apps/v1
@@ -45,11 +44,21 @@ spec:
             - name: http
               containerPort: 8080
           env:
-            - name: DATABASE_URL
+            - name: POSTGRES_HOST
+              value: postgres-dev.dev.svc.cluster.local
+            - name: POSTGRES_PORT
+              value: "5432"
+            - name: POSTGRES_DB
+              value: users
+            - name: POSTGRES_USER
+              value: postgres
+            - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: answers-dev-env
-                  key: DATABASE_URL
+                  name: postgres-dev-env
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_SSLMODE
+              value: disable
             - name: KAFKA_BOOTSTRAP
               valueFrom:
                 secretKeyRef:
