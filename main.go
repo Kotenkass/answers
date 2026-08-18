@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"strconv"
@@ -155,9 +156,6 @@ func loadConfig() (Config, error) {
 	}
 
 	databaseURL := strings.TrimSpace(os.Getenv("DATABASE_URL"))
-	if databaseURL == "" {
-		return Config{}, errors.New("DATABASE_URL is required")
-	}
 
 	kafkaBootstrap := strings.TrimSpace(os.Getenv("KAFKA_BOOTSTRAP"))
 	if kafkaBootstrap == "" {
@@ -212,12 +210,11 @@ func databaseURLFromEnv() (string, error) {
 	}
 
 	return fmt.Sprintf(
-		"postgres://%s:%s@%s:%s/%s?sslmode=%s",
-		user,
-		password,
+		"postgres://%s@%s:%s/%s?sslmode=%s",
+		url.UserPassword(user, password).String(),
 		host,
 		port,
-		db,
+		url.PathEscape(db),
 		sslMode,
 	), nil
 }
