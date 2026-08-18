@@ -55,8 +55,8 @@ type AnswerRequest struct {
 }
 
 type AnswerReceivedEvent struct {
-	ChatID   int64  `json:"chat_id"`
-	AnswerID int64  `json:"answer_id"`
+	ChatID   string `json:"chat_id"`
+	AnswerID string `json:"answer_id"`
 	SentAt   string `json:"sent_at"`
 }
 
@@ -350,8 +350,8 @@ func (s *Service) createAnswer(c echo.Context) error {
 
 func (s *Service) publishAnswerReceived(ctx context.Context, answer *Answer) error {
 	event := AnswerReceivedEvent{
-		ChatID:   answer.ChatID,
-		AnswerID: answer.ID,
+		ChatID:   strconv.FormatInt(answer.ChatID, 10),
+		AnswerID: strconv.FormatInt(answer.ID, 10),
 		SentAt:   answer.SentAt.UTC().Format(time.RFC3339),
 	}
 
