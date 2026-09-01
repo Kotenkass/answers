@@ -58,7 +58,6 @@ jobs:
       contents: read
     env:
       GOFLAGS: -mod=readonly
-      GOBIN: ${{ github.workspace }}/.bin
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -69,12 +68,6 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Add Go tools to PATH
-        run: mkdir -p "$GOBIN" && echo "$GOBIN" >> "$GITHUB_PATH"
-
-      - name: Install govulncheck
-        run: go install golang.org/x/vuln/cmd/govulncheck@v1.7.0
-
       - name: Download Go modules
         run: go mod download
 
@@ -82,7 +75,10 @@ jobs:
         id: govulncheck
         run: |
           exit_code=0
-          govulncheck -format json ./... > govulncheck.json || exit_code=$?
+          go run \
+            golang.org/x/vuln/cmd/govulncheck \
+            -format json \
+            ./... > govulncheck.json || exit_code=$?
           echo "exit_code=$exit_code" >> "$GITHUB_OUTPUT"
 
       - name: Run Trivy filesystem SARIF report
