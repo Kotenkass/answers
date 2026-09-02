@@ -1,0 +1,126 @@
+name: Security scanning
+
+on:
+  push:
+    branches:
+      - master
+      - main
+  pull_request:
+    branches:
+      - master
+      - main
+      - dev
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sast:
+    name: SAST - Semgrep
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Semgrep
+        run: |
+          docker run --rm \
+            -v "$PWD:/src" \
+            -w /src \
+            returntocorp/semgrep:latest \
+            semgrep \
+              --config p/golang \
+              --config p/security-audit \
+              --severity ERROR \
+              --sarif \
+              --output semgrep.sarif \
+              --error \
+              --exclude vendor/ \
+              --exclude '*_test.go' \
+              .
+
+      - name: Upload Semgrep SARIF artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: semgrep-sarif-${{ github.event.repository.name }}
+          path: semgrep.sarif
+          retention-days: 14
+          if-no-files-found: error
+
+  sca:
+    name: SCA - govulncheck and Trivy
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      GOFLAGS: -mod=readonly
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Download Go modules
+        run: go mod download
+
+      - name: Run govulncheck
+        id: govulncheck
+        run: |
+          exit_code=0
+          go run \
+            golang.org/x/vuln/cmd/govulncheck \
+            -format json \
+            ./... > govulncheck.json || exit_code=$?
+          echo "exit_code=$exit_code" >> "$GITHUB_OUTPUT"
+
+      - name: Run Trivy filesystem SARIF report
+        run: |
+          docker run --rm \
+            -v "$PWD:/src" \
+            -v trivy-cache:/root/.cache \
+            aquasec/trivy:latest \
+            fs \
+              --scanners vuln,secret \
+              --format sarif \
+              --output /src/trivy.sarif \
+              --severity UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL \
+              /src
+
+      - name: Run Trivy blocking check
+        id: trivy
+        run: |
+          exit_code=0
+          docker run --rm \
+            -v "$PWD:/src" \
+            -v trivy-cache:/root/.cache \
+            aquasec/trivy:latest \
+            fs \
+              --scanners vuln,secret \
+              --severity HIGH,CRITICAL \
+              --exit-code 1 \
+              /src || exit_code=$?
+          echo "exit_code=$exit_code" >> "$GITHUB_OUTPUT"
+      - name: Fail SCA if security tools found issues
+        if: >-
+          steps.govulncheck.outputs.exit_code != '0' ||
+          steps.trivy.outputs.exit_code != '0'
+        run: exit 1
+
+      - name: Upload SCA reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sca-reports-${{ github.event.repository.name }}
+          path: |
+            govulncheck.json
+            trivy.sarif
+          retention-days: 14
+          if-no-files-found: warn

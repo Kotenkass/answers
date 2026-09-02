@@ -5,6 +5,15 @@ metadata:
   labels:
     environment: dev
 ---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: answers-dev-env
+  namespace: dev
+type: Opaque
+stringData:
+  KAFKA_BOOTSTRAP: kafka-kafka-bootstrap.kafka.svc:9092
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -35,11 +44,21 @@ spec:
             - name: http
               containerPort: 8080
           env:
-            - name: DATABASE_URL
+            - name: POSTGRES_HOST
+              value: postgres-dev.dev.svc.cluster.local
+            - name: POSTGRES_PORT
+              value: "5432"
+            - name: POSTGRES_DB
+              value: users
+            - name: POSTGRES_USER
+              value: postgres
+            - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: answers-dev-env
-                  key: DATABASE_URL
+                  name: postgres-dev-env
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_SSLMODE
+              value: disable
             - name: KAFKA_BOOTSTRAP
               valueFrom:
                 secretKeyRef:
@@ -65,11 +84,11 @@ spec:
             failureThreshold: 6
           resources:
             requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
               cpu: 100m
               memory: 128Mi
-            limits:
-              cpu: 500m
-              memory: 512Mi
 ---
 apiVersion: v1
 kind: Service
