@@ -1,0 +1,33 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-cosign-signature-prod
+  annotations:
+    policies.kyverno.io/title: Require Cosign Signature in Production
+    policies.kyverno.io/category: Image Security
+    policies.kyverno.io/severity: critical
+    policies.kyverno.io/description: >-
+      Requires production workloads to use images signed with the configured cosign key.
+      Enforce production image signature validation for all matching workloads.
+spec:
+  validationFailureAction: enforce
+  background: true
+  rules:
+    - name: require-signed-images-in-prod
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+              namespaces:
+                - prod
+      verifyImages:
+        - imageReferences:
+            - "docker.io/anikolaevdo/answers*"
+          attestors:
+            - entries:
+                - keys:
+                    publicKeys: |-
+                      -----BEGIN PUBLIC KEY-----
+                      REPLACE_ME_WITH_YOUR_COSIGN_PUBLIC_KEY
+                      -----END PUBLIC KEY-----
