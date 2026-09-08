@@ -60,7 +60,7 @@ spec:
           spec:
             =(initContainers):
               - =(securityContext):
-                  runAsNonRoot: "!false"
+                  =(runAsNonRoot): "!false"
             containers:
               - =(securityContext):
-                  runAsNonRoot: "!false"
+                  =(runAsNonRoot): "!false"
