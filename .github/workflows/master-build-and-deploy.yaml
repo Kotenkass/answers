@@ -30,9 +30,15 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
+      - name: Checkout project-next-charts
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: Kotenkass/project-next-charts
+          path: project-next-charts
+
       - name: Render Kyverno policies
         run: |
-          ./scripts/render-kyverno-policies.sh rendered-k8s/policies k8s/policies
+          project-next-charts/scripts/render-kyverno-policies.sh rendered-k8s/policies project-next-charts/k8s/policies
 
       - name: Upload rendered Kyverno policies
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -127,6 +133,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Checkout project-next-charts
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: Kotenkass/project-next-charts
+          path: project-next-charts
+
       - name: Set up kubectl
         uses: azure/setup-kubectl@v3
 
@@ -146,7 +158,7 @@ jobs:
           path: /tmp/kyverno-policies
 
       - name: Ensure Kyverno policy admin RBAC
-        run: kubectl --kubeconfig "$KUBECONFIG" apply -f k8s/rbac/kyverno-policy-admin.yaml
+        run: kubectl --kubeconfig "$KUBECONFIG" apply -f project-next-charts/k8s/rbac/kyverno-policy-admin.yaml
 
       - name: Apply Kyverno image security policies
         run: kubectl --kubeconfig "$KUBECONFIG" apply -f /tmp/kyverno-policies

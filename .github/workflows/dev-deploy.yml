@@ -26,6 +26,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
 
+      - name: Checkout project-next-charts
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: Kotenkass/project-next-charts
+          path: project-next-charts
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f
 
@@ -74,11 +80,11 @@ jobs:
           kubectl --kubeconfig "$KUBECONFIG" auth can-i get pods --all-namespaces
 
       - name: Ensure Kyverno policy admin RBAC
-        run: kubectl --kubeconfig "$KUBECONFIG" apply -f k8s/rbac/kyverno-policy-admin.yaml
+        run: kubectl --kubeconfig "$KUBECONFIG" apply -f project-next-charts/k8s/rbac/kyverno-policy-admin.yaml
 
       - name: Apply Kyverno image security policies
         run: |
-          ./scripts/render-kyverno-policies.sh rendered-k8s/policies k8s/policies
+          project-next-charts/scripts/render-kyverno-policies.sh rendered-k8s/policies project-next-charts/k8s/policies
           kubectl --kubeconfig "$KUBECONFIG" apply -f rendered-k8s/policies
 
       - name: Create or update answers dev Secret
