@@ -37,6 +37,10 @@ spec:
       exclude:
         any:
           - resources:
+              namespaces:
+                - kafka
+                - clickhouse-operator-system
+          - resources:
               names:
                 - "postgres-dev-*"
                 - "redis-master-*"
