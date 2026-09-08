@@ -34,11 +34,17 @@ spec:
         app: answers
         environment: dev
     spec:
+      automountServiceAccountToken: false
       imagePullSecrets:
         - name: docker-hub-pull-secret
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
       containers:
         - name: answers
-          image: docker.io/anikolaevdo/answers
+          image: docker.io/anikolaevdo/answers:dev
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -64,8 +70,13 @@ spec:
                 secretKeyRef:
                   name: answers-dev-env
                   key: KAFKA_BOOTSTRAP
+            - name: IMAGE_TAG
+              value: dev
             - name: LOG_LEVEL
               value: debug
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
           readinessProbe:
             httpGet:
               path: /healthz

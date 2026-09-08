@@ -2,58 +2,95 @@ name: Dev Deploy
 
 on:
   push:
-    branches:
-      - dev
-
-permissions:
-  contents: read
+    branches-ignore:
+      - main
+      - master
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
     name: Build image and deploy to dev
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
 
     env:
-      IMAGE_NAME: ${{ secrets.DOCKER_HUB_USERNAME }}/answers
+      IMAGE_NAME: docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/answers
       IMAGE_TAG: dev
+      COSIGN_PUB: ${{ vars.COSIGN_PUB }}
       NAMESPACE: dev
       KUBECONFIG: /tmp/kubeconfig
       MANIFEST_PATH: k8s/Actions/manifest-dev.yaml
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Checkout project-next-charts
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: Kotenkass/project-next-charts
+          path: project-next-charts
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f
 
       - name: Log in to Docker Hub
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v6
+      - name: Build Docker image
+        id: build
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8
         with:
           context: .
           file: docker/Dockerfile
-          push: true
+          push: false
+          load: true
           tags: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
 
+      - name: Run Trivy image scan
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v trivy-cache:/root/.cache \
+            aquasec/trivy@sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969 \
+            image \
+              --scanners vuln,secret \
+              --severity CRITICAL \
+              --exit-code 1 \
+              --format table \
+              "${IMAGE_NAME}:${IMAGE_TAG}"
+
+      - name: Push scanned Docker image
+        run: docker push "${IMAGE_NAME}:${IMAGE_TAG}"
+
       - name: Set up kubectl
-        uses: azure/setup-kubectl@v3
+        uses: azure/setup-kubectl@901a10e89ea615cf61f57ac05cecdf23e7de06d8
 
       - name: Prepare kubeconfig
+        env:
+          KUBECONFIG_BASE64: ${{ secrets.KUBECONFIG_BASE64 }}
         run: |
           mkdir -p "$(dirname "$KUBECONFIG")"
-          echo "${{ secrets.KUBECONFIG_BASE64 }}" | base64 --decode > "$KUBECONFIG"
+          printf '%s' "$KUBECONFIG_BASE64" | base64 --decode > "$KUBECONFIG"
           chmod 600 "$KUBECONFIG"
           kubectl --kubeconfig "$KUBECONFIG" auth can-i get pods --all-namespaces
+
+      - name: Ensure Kyverno policy admin RBAC
+        run: kubectl --kubeconfig "$KUBECONFIG" apply -f project-next-charts/k8s/rbac/kyverno-policy-admin.yaml
+
+      - name: Apply Kyverno image security policies
+        run: |
+          project-next-charts/scripts/render-kyverno-policies.sh rendered-k8s/policies project-next-charts/k8s/policies
+          kubectl --kubeconfig "$KUBECONFIG" apply -f rendered-k8s/policies
 
       - name: Create or update answers dev Secret
         run: |
           kubectl --kubeconfig "$KUBECONFIG" create secret generic answers-dev-env \
+            --namespace "$NAMESPACE" \
             --from-literal=DATABASE_URL="${{ secrets.DATABASE_URL }}" \
             --from-literal=KAFKA_BOOTSTRAP="${{ secrets.KAFKA_BOOTSTRAP }}" \
             --dry-run=client -o yaml | kubectl --kubeconfig "$KUBECONFIG" apply -f -
@@ -61,6 +98,7 @@ jobs:
       - name: Create or update Docker Hub pull secret
         run: |
           kubectl --kubeconfig "$KUBECONFIG" create secret docker-registry docker-hub-pull-secret \
+            --namespace "$NAMESPACE" \
             --docker-server="https://index.docker.io/v1/" \
             --docker-username="${{ secrets.DOCKER_HUB_USERNAME }}" \
             --docker-password="${{ secrets.DOCKER_HUB_TOKEN }}" \
