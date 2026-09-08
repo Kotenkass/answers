@@ -34,10 +34,10 @@ spec:
           spec:
             =(initContainers):
               - =(securityContext):
-                  privileged: "false"
+                  =(privileged): "false"
             containers:
               - =(securityContext):
-                  privileged: "false"
+                  =(privileged): "false"
 
     - name: disallow-run-as-non-root-false
       match:
