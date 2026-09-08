@@ -15,7 +15,7 @@ jobs:
     permissions:
       contents: read
     env:
-      IMAGE_NAME: ${{ secrets.DOCKER_HUB_USERNAME }}/answers
+      IMAGE_NAME: docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/answers
       IMAGE_TAG: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.sha }}
       COSIGN_KEY: ${{ secrets.COSIGN_KEY }}
       COSIGN_PUB: ${{ vars.COSIGN_PUB }}

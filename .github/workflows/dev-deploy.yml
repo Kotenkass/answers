@@ -15,7 +15,7 @@ jobs:
       contents: read
 
     env:
-      IMAGE_NAME: ${{ secrets.DOCKER_HUB_USERNAME }}/answers
+      IMAGE_NAME: docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/answers
       IMAGE_TAG: dev
       COSIGN_PUB: ${{ vars.COSIGN_PUB }}
       NAMESPACE: dev
