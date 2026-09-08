@@ -40,6 +40,8 @@ spec:
               names:
                 - "postgres-dev-*"
                 - "redis-master-*"
+                - "analytics-clickhouse-*"
+                - "kafka-kafka-*"
       validate:
         message: "Images must be pulled from the approved registry: docker.io/anikolaevdo/."
         pattern:
