@@ -119,6 +119,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: build
+    if: github.event_name == 'push'
     permissions:
       contents: read
     env:
