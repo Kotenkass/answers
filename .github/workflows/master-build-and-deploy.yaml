@@ -163,6 +163,11 @@ jobs:
       - name: Apply Kyverno image security policies
         run: kubectl --kubeconfig "$KUBECONFIG" apply -f /tmp/kyverno-policies
 
+      - name: Ensure prod namespace exists
+        run: |
+          kubectl --kubeconfig "$KUBECONFIG" create namespace "$NAMESPACE" --dry-run=client -o yaml | \
+            kubectl --kubeconfig "$KUBECONFIG" apply -f -
+
       - name: Create or update answers environment Secret
         run: |
           kubectl --kubeconfig "$KUBECONFIG" create secret generic answers-env \
@@ -170,11 +175,6 @@ jobs:
             --from-literal=DATABASE_URL="$DATABASE_URL" \
             --from-literal=KAFKA_BOOTSTRAP="$KAFKA_BOOTSTRAP" \
             --dry-run=client -o yaml | kubectl --kubeconfig "$KUBECONFIG" apply -f -
-
-      - name: Ensure prod namespace exists
-        run: |
-          kubectl --kubeconfig "$KUBECONFIG" create namespace "$NAMESPACE" --dry-run=client -o yaml | \
-            kubectl --kubeconfig "$KUBECONFIG" apply -f -
 
       - name: Apply Manifest
         run: kubectl --kubeconfig "$KUBECONFIG" apply -n "$NAMESPACE" -f "$MANIFEST_PATH"
