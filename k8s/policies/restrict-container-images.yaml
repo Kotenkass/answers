@@ -34,6 +34,12 @@ spec:
           - resources:
               kinds:
                 - Pod
+      exclude:
+        any:
+          - resources:
+              names:
+                - "postgres-dev-*"
+                - "redis-master-*"
       validate:
         message: "Images must be pulled from the approved registry: docker.io/anikolaevdo/."
         pattern:
